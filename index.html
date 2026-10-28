@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Docket Junior</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one big ruled index card (the case) on a docket board, chips above, controls and docket list below */
+:root{
+  --bg:#e7ecf2; --card:#ffffff; --rule:#d6e2f0; --margin:#e7a3a8;
+  --ink:#1c2a44; --muted:#5d6b82; --stamp:#b0263b; --chip:#d7dfe9; --ok:#2f7a4e;
+  --display:"Zilla Slab", Georgia, serif;
+  --body:"Atkinson Hyperlegible", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#121a28; --card:#1b2638; --rule:#25344c; --margin:#6e3440;
+  --ink:#e6edf7; --muted:#9aa8bf; --stamp:#f07a8c; --chip:#26344a; --ok:#6cc792; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121a28; --card:#1b2638; --rule:#25344c; --margin:#6e3440;
+  --ink:#e6edf7; --muted:#9aa8bf; --stamp:#f07a8c; --chip:#26344a; --ok:#6cc792; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;margin:0;letter-spacing:.01em;text-wrap:balance}
+.sub{color:var(--muted);margin:2px 0 0;font-size:.95rem}
+.toggle{display:flex;align-items:center;gap:8px;font-size:.9rem;color:var(--muted);cursor:pointer;user-select:none}
+.toggle input{width:18px;height:18px;accent-color:var(--stamp)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font:inherit;font-size:.9rem;border:1.5px solid transparent;background:var(--chip);color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--ink);font-weight:700}
+.chip:focus-visible,button:focus-visible{outline:3px solid var(--stamp);outline-offset:2px}
+
+/* the index card */
+.card{position:relative;background:var(--card);border-radius:6px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 10px 30px -12px rgba(20,30,60,.35);
+  background-image:linear-gradient(to right,transparent 46px,var(--margin) 46px,var(--margin) 48px,transparent 48px),
+                   repeating-linear-gradient(to bottom,transparent 0,transparent 33px,var(--rule) 33px,var(--rule) 34px);
+  background-position:0 0,0 62px;padding:22px 24px 26px 66px;min-height:340px;display:flex;flex-direction:column;gap:14px}
+.meta{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.caseno{font-family:var(--mono);font-size:.85rem;color:var(--muted);letter-spacing:.06em}
+.stamp{font-family:var(--display);font-weight:700;text-transform:uppercase;letter-spacing:.12em;font-size:.78rem;
+  color:var(--stamp);border:2px solid var(--stamp);padding:2px 10px;border-radius:4px;transform:rotate(-2deg)}
+.ruled .stamp.rd{display:inline-block}
+.stamp.rd{display:none;color:var(--ok);border-color:var(--ok);transform:rotate(3deg)}
+.card h2{font-family:var(--display);font-weight:700;font-size:clamp(1.6rem,4.5vw,2.3rem);line-height:1.15;margin:0;text-wrap:balance}
+.story{font-size:clamp(1.15rem,3vw,1.4rem);line-height:34px;margin:0;max-width:60ch}
+.question{border-left:4px solid var(--stamp);padding:4px 0 4px 14px;font-weight:700;font-size:clamp(1.15rem,3vw,1.35rem);margin:0}
+.hint{color:var(--muted);font-size:.95rem;margin:0}
+.notes{border-top:2px dashed var(--rule);padding-top:12px;display:grid;gap:8px;font-size:.98rem}
+.notes b{font-family:var(--display);color:var(--stamp);margin-right:4px}
+
+.controls{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.btn{font:inherit;font-weight:700;border:0;border-radius:8px;padding:12px 18px;cursor:pointer;background:var(--chip);color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--card)}
+.btn.rule{background:transparent;border:2px solid var(--ok);color:var(--ok)}
+.progress{text-align:center;color:var(--muted);font-size:.9rem;font-variant-numeric:tabular-nums}
+
+details{background:var(--card);border-radius:6px;padding:12px 16px}
+summary{cursor:pointer;font-family:var(--display);font-weight:700;font-size:1.1rem}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin-top:10px}
+.item{font:inherit;text-align:left;background:transparent;border:0;border-radius:6px;padding:6px 8px;cursor:pointer;color:var(--ink);display:flex;gap:8px;align-items:baseline;min-width:0}
+.item:hover{background:var(--chip)}
+.item .n{font-family:var(--mono);font-size:.78rem;color:var(--muted);flex:none}
+.item.done .t{text-decoration:line-through;text-decoration-color:var(--ok)}
+@media (max-width:520px){.card{padding:18px 16px 22px 54px;background-image:linear-gradient(to right,transparent 36px,var(--margin) 36px,var(--margin) 38px,transparent 38px),repeating-linear-gradient(to bottom,transparent 0,transparent 33px,var(--rule) 33px,var(--rule) 34px)}}
+@media (prefers-reduced-motion:no-preference){.card.flip{animation:flip .28s ease-out}@keyframes flip{from{transform:translateY(6px) rotate(-.6deg);opacity:.6}to{transform:none;opacity:1}}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Docket Junior</h1>
+      <p class="sub">Pick a card. Think it through. Answer on the board.</p>
+    </div>
+    <label class="toggle" for="dad" id="dadwrap" hidden><input type="checkbox" id="dad"> Dad notes</label>
+  </header>
+
+  <nav class="chips" id="chips" aria-label="Pick a docket"></nav>
+
+  <article class="card" id="card" aria-live="polite">
+    <div class="meta">
+      <span class="caseno" id="caseno"></span>
+      <span style="display:flex;gap:8px"><span class="stamp" id="track"></span><span class="stamp rd">Done</span></span>
+    </div>
+    <h2 id="title"></h2>
+    <p class="story" id="story"></p>
+    <p class="question" id="question"></p>
+    <p class="hint" id="hint">Write your answer and one reason. Draw ✓ when done, ? if stuck.</p>
+    <div class="notes" id="notes" hidden></div>
+  </article>
+
+  <div class="controls">
+    <button class="btn" id="prev">← Back</button>
+    <button class="btn primary" id="rand">Draw a card</button>
+    <button class="btn" id="next">Next →</button>
+    <button class="btn rule" id="ruleBtn">Mark done</button>
+  </div>
+  <p class="progress" id="progress"></p>
+
+  <details>
+    <summary>All cards</summary>
+    <div class="list" id="list"></div>
+  </details>
+</div>
+
+<script>
+const TRACKS={P:["Law","Mine & Yours"],C:["Law","Promises"],L:["Law","Using My Stuff"],S:["Business","Fair Shares"],A:["Math","Number Puzzles"],M:["Finance","Money Math"],F:["Finance","Growing Money"],E:["Economics","Choices & Markets"]};
+const SUBJECTS=["Law","Business","Math","Finance","Economics"];
+const SHOWWORK=new Set(["A","M","F"]);
+const CASES=[
+["P","The Found Five","Maya finds a $5 bill on the playground. Nobody is around.","Does Maya get to keep it?","Finding isn't owning. The owner still owns it; the finder has to make a real try to return it.","What if the bill had a name written on it?","Would your answer change if it were $100? Why does the amount matter?"],
+["P","The Borrowed Bike","Sam lends Maya his bike. It comes back with a big scratch.","What does Maya owe Sam?","When you borrow something you have to take care of it. If you damage it, you fix it or pay.","What if it got scratched when a storm knocked it over?","Sam never said \"be careful.\" Does Maya still owe him?"],
+["P","The Gift Takeback","Leo gives Ava a shiny sticker. The next day he wants it back.","Does Ava have to give it back?","A gift is final once it's handed over. Changing your mind later doesn't undo it.","What if Leo had said \"you can borrow it\"?","What if Ava hadn't picked it up yet?"],
+["P","Whose Tower?","Ben brings the Lego bricks. Zoe draws the plan and does most of the building.","Who owns the tower?","Materials and work are both valuable. When two people put in different things, they can own something together.","What happens when it's time to take it apart?","Should the person who brought the bricks get more? Why?"],
+["P","The Fence Apples","Mr. Lee's apple tree hangs over the fence. Apples fall into your yard.","Whose apples are they?","Where a thing ends up isn't the same as who owns it. Neighbors usually work out rules for this.","Can you pick an apple off a branch that's on your side?","What would be a fair deal you could offer Mr. Lee?"],
+["P","Nobody's Ball","The class finds a ball. Nobody claims it for a whole month.","Who owns it now?","If an owner gives up on a thing, it can become anyone's. Fair rules say how long to wait.","How long is long enough to wait?","The owner shows up after two months. Now what?"],
+["C","Half a Clean Room","Dad promises $2 if you clean your room. You clean half of it.","Should you get paid? How much?","A deal has terms. Doing part of the job may earn part of the pay, or nothing, depending on what you agreed.","What should the deal have said to avoid this fight?","Is $1 fair, or is a half-clean room worth $0?"],
+["C","The Pinky Swear","Noah pinky-swears he'll trade his cards on Tuesday. On Monday he changes his mind.","Can Noah back out?","A promise both people agreed to is a deal. Backing out usually needs a good reason or the other person's okay.","What if nobody had said yes yet?","Does a pinky swear count as much as a written deal?"],
+["C","Win to Win","Lily says, \"I'll give you my snack if you win the race.\" You come in second.","Do you get the snack?","Some promises have an \"if.\" When the \"if\" doesn't happen, the promise doesn't kick in.","What if the winner was disqualified?","Write the \"if\" more clearly so there's no fight."],
+["C","The Late Lemonade","You promise 10 cups of lemonade by noon for a party. You show up at 1:00. The party is over.","Do they still have to pay you?","Sometimes when matters as much as what. Late can mean the deal is broken.","What if you had called to say you'd be late?","Should they pay half since the lemonade is still good?"],
+["C","The Wobbly Wheel","You trade for a toy car. Later you find the wheel was broken, and the other kid knew.","Is the trade still fair?","Hiding a problem you know about is not okay. That can undo the deal.","What if he didn't know about the wheel?","Should he fix it, trade back, or give you something extra?"],
+["C","One Gum for Twenty","A big kid offers you one piece of gum for 20 of your cards. You say yes, then feel bad.","Should the trade count?","Feeling sorry later isn't a reason to undo a deal. Being tricked or pushed around might be.","What if the big kid said you had to say yes?","How do you decide if a trade is fair before you make it?"],
+["C","Write It Down","You and your brother argue about what you agreed to yesterday.","How could you stop this fight from happening again?","Writing a deal down means nobody has to remember. That's why grown-ups use contracts.","Write a 3-line deal for something real this week.","What must every deal say? (Who, what, when, what if)"],
+["S","Pizza Math","4 friends share a pizza with 8 slices.","How many slices does each friend get?","Fair can mean equal. Divide the whole by the number of people.","One friend paid for half the pizza. Now what's fair?","Is equal always fair?"],
+["S","Lemonade Partners","Dad gives $10 for supplies. You do all the work. You make $20.","Who gets what?","Money and work are both things you put in. Partners decide the split before they start.","What split would you pick? Why?","What if you had lost money instead?"],
+["S","The New Partner","Your stand is going great. A friend wants to join and bring cookies.","How much of the business should he get?","Each new owner makes everyone else's piece smaller. That's called dilution.","If you each own half now, what happens with three owners?","Should he get less because he joined late?"],
+["S","Who Decides?","You own half the stand. Dad owns half. You want 50¢ cups. Dad wants $1 cups.","Who wins?","Owners vote. With a 50-50 split, nobody wins a tie unless you agreed how to break it.","Come up with a tie-breaker rule.","What if you owned 51%?"],
+["S","The Partner Who Quit","Your partner stops showing up after one week. You keep working all month.","Should she still get half the money?","Many deals say you earn your share over time by showing up. That's called vesting.","What share did she earn?","How would you write this into your deal next time?"],
+["S","Selling Your Half","You want to sell your half of the stand to a friend for $15.","Do you need your partner's okay?","Partners often agree that nobody can bring in a new owner without asking.","Why might your partner care who the new owner is?","Should your partner get the first chance to buy it?"],
+["S","Spend or Grow?","The stand made $30 extra this month.","Pay it out to the owners, or buy a bigger sign?","Owners choose between taking money now and growing the business for later.","How do you decide if the sign is worth it?","What if one owner wants cash and the other wants the sign?"],
+["L","Rent My Dragon","A friend wants to put your dragon drawing on a T-shirt.","Should you sell it or rent it?","Renting the right to use your art is a license. You still own the drawing.","What's the difference between selling and renting?","Can you rent it to someone else at the same time?"],
+["L","A Dime a Shirt","Your friend will sell the dragon shirts. She offers $1 once, or 10¢ for every shirt she sells.","Which deal do you pick?","Paying a little each time something sells is called a royalty.","At how many shirts are the two deals equal? (10)","When is the $1 the smarter pick?"],
+["L","Only You?","Two friends both want to use your dragon.","Should you let both use it?","Letting only one person use it is \"exclusive.\" That's worth more, so it costs more.","How much more would you charge for only-you?","What if the only-you friend never makes any shirts?"],
+["L","The Copycat Dragon","Another kid draws a dragon that looks just like yours.","Is that allowed?","Copying someone's art without asking isn't fair. Making your own dragon is fine.","How can you tell copying from coming up with it yourself?","What should happen to the copycat shirts?"],
+["L","Secret Cookies","Your cookie recipe is the best. A shop wants it.","Share the recipe, rent it, or keep it secret?","A secret can be valuable as long as it stays secret.","If you share it, how do you make sure they don't tell?","What happens to the value once everyone knows?"],
+["L","The Deal Ran Out","You let your friend use the dragon for one month. Two months later she's still printing shirts.","What should you do?","Licenses have an end date. Using it after the end breaks the deal.","What could you ask her for?","Write a rule for next time that makes the end clear."],
+["M","Half of Half","You own half of the lemonade stand. The stand owns half of a cookie business.","How much of the cookie business is yours?","Ownership multiplies. Half of half is one quarter.","Draw it as a picture.","What if the stand owned all of the cookie business?"],
+["M","Ten Percent","Your royalty is 10% of every sale. Your friend sells $50 of shirts.","How much do you get?","Percent means \"out of 100.\" 10% is 1 out of every 10.","What is 10% of $7?","Would you rather have 10% or $4?"],
+["M","Now or Later?","Grandma offers $10 today or $12 in one month.","Which do you pick?","Money later can be worth more if you wait. Waiting has a cost too.","What would you do with the $10 right now?","What if it were $10 today or $10.50 in a year?"],
+["M","Lend and Earn","You lend your brother $10. He pays you back $11.","How much extra did you earn? What percent is that?","Extra money for lending is called interest.","What if he paid back $11 after a year instead of a week?","What if he never paid you back? How do lenders protect themselves?"],
+["A","Mystery Box","Some cookies are in a box. Maya puts in 5 more. Now there are 12.","How many cookies were in the box at the start? Write it as □ + 5 = 12.","Answer: 7. Undo adding by subtracting: 12 − 5 = 7. The □ is his first variable.","Check it: put 7 back in the box. Does 7 + 5 make 12?","What if Maya took out 5 and then there were 12? (17)"],
+["A","Missing Cups","You sold some cups in the morning and 8 cups in the afternoon. You sold 20 cups in all.","How many did you sell in the morning? Write m + 8 = 20.","Answer: m = 12. A letter is just a box with a name.","Why use m instead of a box? (m for morning reminds you what it means)","The afternoon was twice the morning, and you sold 18 in all. Now what? (m = 6)"],
+["A","The Balance Scale","A scale is balanced. One side has a bag of marbles and 3 loose marbles. The other side has 10 marbles.","How many marbles are in the bag?","Answer: 7. Take 3 marbles off BOTH sides and it still balances, so bag = 7. This is the core move of algebra.","Draw the scale before and after.","Two bags plus 3 marbles on one side, 11 on the other? (4 in each bag)"],
+["A","Cup Rows","You set out cups in 4 rows with 6 cups in each row.","How many cups are there?","Answer: 24. Multiplying is fast adding of equal groups: 6 + 6 + 6 + 6 = 4 × 6.","Draw it as a grid of dots.","Turn the grid sideways. Is 6 × 4 the same as 4 × 6?"],
+["A","Price Times Cups","Each cup of lemonade costs $2. At the end of the day you have $14.","How many cups did you sell? Write 2 × c = 14.","Answer: c = 7. Undo times by dividing: 14 ÷ 2 = 7.","Count by 2s until you hit 14. How many counts?","Cups cost $3 and you made $21. How many? (7)"],
+["A","Share the Jar","There are 18 stickers in the jar. 3 partners share them equally.","How many stickers does each partner get?","Answer: 6. Dividing is fair sharing: 18 ÷ 3 = 6.","Deal them out one at a time like cards. Same answer?","What if there were 20 stickers? What do you do with the 2 left over?"],
+["A","Twin Numbers","A number plus the same number makes 16. Write n + n = 16.","What is n?","Answer: 8. The same letter always means the same number. n + n is also 2 × n.","Try n + n + n = 15. (5)","Can n + n ever make an odd number? (Not with whole numbers)"],
+["A","Two Steps","Dad gives you $3 to start. Then you earn $2 for every cup. At the end you have $11.","How many cups did you sell? Write 3 + 2 × c = 11.","Answer: c = 4. Undo in reverse order: take away the 3 first (8), then divide by 2 (4).","Check it: 3 + 2 + 2 + 2 + 2 = ?","Dad gives $5 and you end with $15. How many cups? (5)"],
+["A","Dragon Dimes","Your dragon royalty is 10¢ for every shirt sold. You got 90¢.","How many shirts were sold?","Answer: 9. 10 × s = 90, so s = 90 ÷ 10.","How many shirts to earn $1? (10)","How many to earn $5? (50)"],
+["A","Half the Stand","You own half the lemonade stand. This week the stand made $16.","What is your share?","Answer: $8. Half of something means divide by 2. Ownership is just fractions.","Dad owns the other half. Do your shares add back to $16?","What if you owned one quarter? ($4)"],
+["A","Break Even","Your supplies cost $6. Each cup sells for $1.","How many cups do you need to sell to get your $6 back?","Answer: 6. That point is called break-even. Every cup after it is profit.","You sold 15 cups. What is your profit? ($9)","Raise the price to $2. Now when do you break even? (3 cups)"],
+["A","Better Deal","Store A sells 6 stickers for $2. Store B sells 10 stickers for $5.","Which store gives you more stickers for each dollar?","Answer: Store A. A gives 3 per dollar (6 ÷ 2), B gives 2 per dollar (10 ÷ 5). This is a unit rate.","How many stickers does $4 buy at each store? (12 vs 8)","Store C sells 9 for $3. Where does it rank? (3 per dollar, ties A)"],
+["A","Savings Pattern","You start with $1 in your piggy bank and add $2 every week.","How much will you have after 5 weeks?","Answer: $11. Pattern: 1, 3, 5, 7, 9, 11. Rule: start + 2 × weeks.","Make a table of weeks and dollars.","How many weeks until you have $21? (10)"],
+["A","Uneven Split","You and a partner split $24. You get $10 more than your partner.","How much does each person get?","Answer: partner $7, you $17. If the partner gets p, then p + (p + 10) = 24, so 2 × p = 14.","Guess and check first, then try the balance-scale way.","Split $30 so you get twice your partner. ($10 and $20)"],
+["F","Save for the Big One","You have $10. A small toy costs $10. The toy you really want costs $20.","If you save $2 a week, how many weeks until you can buy the big toy?","Answer: 5 weeks. Saving is choosing something better later over something smaller now.","Make a chart: week 0 = $10, week 1 = $12...","What if Grandma adds $5 in week 2? (3 weeks)"],
+["F","Three Jars","You put your allowance into three jars: Spend, Save and Give.","You get $6. How would you split it between the jars?","A budget is a plan for your money before you spend it. There is no single right split; the reason matters.","Why might the Save jar get the most?","What would you do with the Give jar?"],
+["F","Snowball Money","A bank pays you $1 every year for each $10 you keep there. You put in $10.","How much do you have after 1 year? After 2 years?","Answer: $11, then $12.10. In year 2 you earn on the $1 too. Interest on interest is called compounding, and it grows like a snowball.","Why is year 2 more than $1?","About how many years to double your money? (around 7)"],
+["F","All in One Basket","You have 10 marbles. You can bet them all on one game, or put 2 on each of five games.","Which choice is safer? Why?","Spreading things out so one loss can't wipe you out is called diversifying.","What's the best that can happen with all-in-one? The worst?","Why don't people always spread everything out?"],
+["F","The Cost of Borrowing","You borrow $10 from your sister for a toy today. She wants $12 back next week.","How much did borrowing cost you? Was it worth it?","Answer: $2. Borrowing lets you have something sooner, and the extra you pay back is the cost.","Would you borrow to buy candy? To fix your bike?","What if she wanted $15 back?"],
+["F","A Slice of the Company","A company that makes your favorite cereal is cut into 100 equal pieces called shares. You buy 1 share.","What fraction of the company do you own?","Answer: 1/100. A shareholder owns a tiny slice, gets a slice of the profits, and gets a vote.","If the company makes $100 profit and pays it all out, what do you get? ($1)","What should you get to vote on as an owner?"],
+["F","Sure Thing or Coin Flip","Choice A: $5 for sure. Choice B: flip a coin. Heads you get $12, tails you get $0.","Which do you pick? Why?","On average B pays $6 (half of $12), so it's worth more but it's risky. Comparing average payoff to risk is a core money skill.","Would your answer change if you really needed $5 today?","What if heads paid $8? (average $4, so A wins)"],
+["F","Price vs. Value","A used bike costs $20. A new bike costs $100. Both get you to school.","Which is the better buy?","Price is what you pay. Value is what you get. A higher price isn't always more value.","What would make the new bike worth the extra $80?","When is the cheap choice the expensive one?"],
+["E","Truck or Slime?","You have $5. A toy truck costs $5. A tub of slime costs $5. You can only buy one.","If you buy the truck, what are you giving up?","The thing you didn't pick is the real cost of your choice. Economists call it opportunity cost.","Was there a third choice? (Save the $5)","What's the opportunity cost of an hour of video games?"],
+["E","The Last Popsicle","It's a hot day. There's one popsicle left and three kids want it.","What's a fair way to decide who gets it?","When there isn't enough for everyone, that's scarcity. Every group needs a way to choose: first in line, a price, a lottery, or sharing.","List three ways and say what's good and bad about each.","Which way do stores use? (A price)"],
+["E","Hot Day, Cold Day","On hot days lots of people want lemonade. On cold days hardly anyone does.","Should you charge the same price every day?","When more people want something, sellers can charge more. That want is called demand.","What would you charge on a hot day? A cold day?","Could you sell something else on cold days?"],
+["E","Stands Everywhere","Three more kids open lemonade stands on your street.","What happens to your sales and your price?","More sellers means more choices for buyers. That's competition, and it usually pushes prices down.","How could you get people to still pick your stand?","Is competition good or bad for the people buying?"],
+["E","The Sticker Swap","You have extra soccer stickers. Your friend has extra dinosaur stickers. You each want what the other has.","Why does trading make you both happier?","A fair trade can make both sides better off, because each person values the other's thing more.","Can a trade be good for both people at the same time?","What if your friend doesn't want soccer stickers?"],
+["E","Lemonade and Signs","You make great lemonade. Your brother makes great signs. Doing both alone takes each of you all day.","How should you split the work?","When each person does what they're best at and then trades, everyone gets more done. That's specialization.","Why do grown-ups have different jobs?","What's a downside of only doing one thing?"],
+["E","The Reading Sticker Rule","The library gives a sticker for every book read. Soon kids are reading only tiny books.","Why did that happen? How would you fix the rule?","Rewards change what people do. That's an incentive. A bad rule rewards the wrong thing.","Write a better rule.","What's an incentive at home?"],
+["E","The Rare Rock","You find a shiny rock. There are only two like it in the whole school, and lots of kids want one.","Why might it be worth more than a regular rock?","Value comes from being rare and being wanted at the same time.","Would it be worth much if nobody wanted it?","What happens to its value if someone finds a pile of them?"],
+["E","Candy Costs More","Last year a candy bar cost $1. This year it costs $1.25. Your allowance is still $5.","Can you buy more or fewer candy bars than last year?","Answer: 5 last year, 4 this year. When prices rise, the same money buys less. That's inflation.","What would your allowance need to be to buy 5 again? ($6.25)","Why do people want their pay to go up every year?"],
+["E","The Free Pencil Box","The teacher puts out a box of free pencils. By Friday they're gone because some kids took ten.","What went wrong? What rule would fix it?","When something is free and shared, people often take too much. Good rules protect shared stuff.","Is a price, a limit, or a sign-out sheet best? Why?","Can you think of something everyone shares outside school? (Parks, water)"]
+].map((c,i)=>({id:i,track:c[0],title:c[1],story:c[2],q:c[3],idea:c[4],ask:c[5],twist:c[6]}));
+
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let ruled=new Set(store.get("jd-ruled",[]));
+let filter="all", cur=store.get("jd-cur",0);
+const $=id=>document.getElementById(id);
+const dad=$("dad"); dad.checked=store.get("jd-dad",false);
+const isDad=()=>location.hash==="#dad";
+
+function pool(){return CASES.filter(c=>filter==="all"||TRACKS[c.track][0]===filter)}
+function num(c){return "No. "+c.track+"-"+String(c.id+1).padStart(2,"0")}
+
+function render(anim){
+  const c=CASES[cur];
+  $("caseno").textContent=num(c);
+  $("track").textContent=TRACKS[c.track][1];
+  $("dadwrap").hidden=!isDad();
+  $("title").textContent=c.title;
+  $("story").textContent=c.story;
+  $("question").textContent=c.q;
+  $("hint").textContent=SHOWWORK.has(c.track)?"Show your work on the board. Check your answer. Draw ✓ when done, ? if stuck.":"Write your answer and one reason. Draw ✓ when done, ? if stuck.";
+  $("notes").hidden=!(isDad()&&dad.checked);
+  $("notes").innerHTML=`<div><b>Big idea</b>${c.idea}</div><div><b>Follow-up</b>${c.ask}</div><div><b>Twist</b>${c.twist}</div>`;
+  const card=$("card");
+  card.classList.toggle("ruled",ruled.has(c.id));
+  $("ruleBtn").textContent=ruled.has(c.id)?"Unmark":"Mark done";
+  if(anim){card.classList.remove("flip");void card.offsetWidth;card.classList.add("flip")}
+  $("progress").textContent=`${ruled.size} of ${CASES.length} cards done`;
+  renderList(); store.set("jd-cur",cur);
+}
+function renderChips(){
+  const opts=[["all","Everything"],...SUBJECTS.map(s=>[s,s])];
+  $("chips").innerHTML=opts.map(([k,v])=>`<button class="chip" data-k="${k}" aria-pressed="${filter===k}">${v}</button>`).join("");
+}
+function renderList(){
+  $("list").innerHTML=CASES.map(c=>`<button class="item${ruled.has(c.id)?" done":""}" data-i="${c.id}"><span class="n">${c.track}-${String(c.id+1).padStart(2,"0")}</span><span class="t">${c.title}</span></button>`).join("");
+}
+function step(d){const p=pool();let i=p.findIndex(c=>c.id===cur);if(i<0)i=0;else i=(i+d+p.length)%p.length;cur=p[i].id;render(true)}
+function draw(){const p=pool();const fresh=p.filter(c=>!ruled.has(c.id)&&c.id!==cur);const src=fresh.length?fresh:p;cur=src[Math.floor(Math.random()*src.length)].id;render(true)}
+
+$("chips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;filter=b.dataset.k;renderChips();if(!pool().some(c=>c.id===cur))cur=pool()[0].id;render(true)});
+$("list").addEventListener("click",e=>{const b=e.target.closest(".item");if(!b)return;cur=+b.dataset.i;render(true);window.scrollTo({top:0,behavior:"smooth"})});
+$("prev").onclick=()=>step(-1);$("next").onclick=()=>step(1);$("rand").onclick=draw;
+$("ruleBtn").onclick=()=>{ruled.has(cur)?ruled.delete(cur):ruled.add(cur);store.set("jd-ruled",[...ruled]);render(false)};
+dad.onchange=()=>{store.set("jd-dad",dad.checked);render(false)};
+document.addEventListener("keydown",e=>{if(e.target.tagName==="INPUT")return;if(e.key==="ArrowRight")step(1);if(e.key==="ArrowLeft")step(-1);if(e.key===" "){e.preventDefault();draw()}});
+window.addEventListener("hashchange",()=>render(false));
+renderChips();render(false);
+</script>
+</body>
+</html>
